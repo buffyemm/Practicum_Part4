@@ -13,5 +13,6 @@
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+#include <math.h>
 #pragma comment(lib, "Msimg32.lib")
 #pragma comment(lib, "winmm.lib")
