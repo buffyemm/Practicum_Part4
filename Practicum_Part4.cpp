@@ -184,7 +184,7 @@ void Collision_blocks() {
 
 		for (int j = 0; j < column; j++) {
 
-			if (HelpCollise(ball, blocks[i][j])) {
+			if (HelpCollise(ball, blocks[i][j]) && blocks[i][j].isActive) {
 
 				if (ball.x <= blocks[i][j].x && ball.x + ball.rad <= blocks[i][j].x + blocks[i][j].width) {
 
