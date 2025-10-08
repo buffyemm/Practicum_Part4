@@ -178,13 +178,23 @@ void CheckFloor()
 	}
 }
 
-void Collision_blocks() {
+void Collision_blocks(HDC hDC) {
 
 	bool collisionHandled = false; // Флаг для отслеживания, было ли обработано столкновение
 
-	float lenght = sqrt(pow((ball.dx * ball.speed), 2) + pow((ball.dy * ball.speed), 2));
+	float length = sqrt(pow((ball.dx * ball.speed), 2) + pow((ball.dy * ball.speed), 2));
 
-	for (int i = 0; i < lenght; i++) {
+	float bx = ball.x;
+	float by = ball.y;
+
+
+	for (int k = 0; k < length; k++) {
+
+		float s = k / (float)length;
+		float new_x = bx + (ball.dx * ball.speed) * s;
+		float new_y = by + (ball.dy * ball.speed) * s;
+
+		SetPixel(hDC, new_x, new_y, RGB(255, 20, 147));
 
 		for (int i = 0; i < line; i++) {
 
@@ -295,7 +305,7 @@ void ProcessGame() {
 	LimitRacket();
 	ProcessInput();
 	ProcessBall();
-	Collision_blocks();
+	//Collision_blocks();
 	ProcessRoom();
 
 }
@@ -326,6 +336,7 @@ void Case_Timer(WPARAM wParam, HWND hwnd) {
 
 		InvalidateRect(hwnd, NULL, FALSE); // перерисовка всего окна
 		ProcessGame();
+
 
 	}
 
@@ -432,6 +443,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		// 3. Копируем готовый буфер на экран
 		BitBlt(hdc, 0, 0, window.width, window.height, hMemDC, 0, 0, SRCCOPY);
 
+		Collision_blocks(hdc);
 		// 4. Очистка
 		SelectObject(hMemDC, hOldBmp);
 		DeleteObject(hMemBmp);
