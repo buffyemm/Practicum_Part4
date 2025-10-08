@@ -178,26 +178,7 @@ void CheckFloor()
 	}
 }
 
-void Collision_blocks() {
 
-	for (int i = 0; i < line; i++) {
-
-		for (int j = 0; j < column; j++) {
-
-			if(HelpCollise(ball, blocks[i][j])) {
-
-
-				
-
-			}
-
-
-		}
-
-	}
-
-
-}
 
 void ProcessRoom()
 {
