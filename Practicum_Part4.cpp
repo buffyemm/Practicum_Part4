@@ -178,7 +178,37 @@ void CheckFloor()
 	}
 }
 
+void Collision_blocks() {
 
+	for (int i = 0; i < line; i++) {
+
+		for (int j = 0; j < column; j++) {
+
+			if (HelpCollise(ball, blocks[i][j])) {
+
+				if (ball.x <= blocks[i][j].x && ball.x + ball.rad <= blocks[i][j].x + blocks[i][j].width) {
+
+					ball.dx = -ball.dx;
+
+
+				}
+
+				if (ball.y <= blocks[i][j].x + blocks[i][j].height && ball.y + ball.rad >= blocks[i][j].y) {
+
+					ball.dy = -ball.dy;
+
+				}
+
+				blocks[i][j].isActive = false;
+			}
+
+
+		}
+
+	}
+
+
+}
 
 void ProcessRoom()
 {
@@ -249,6 +279,7 @@ void ProcessGame() {
 	LimitRacket();
 	ProcessInput();
 	ProcessBall();
+	Collision_blocks();
 	ProcessRoom();
 
 }
