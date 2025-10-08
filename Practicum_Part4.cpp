@@ -180,31 +180,42 @@ void CheckFloor()
 
 void Collision_blocks() {
 
+	bool collisionHandled = false; // Флаг для отслеживания, было ли обработано столкновение
+
+
 	for (int i = 0; i < line; i++) {
 
 		for (int j = 0; j < column; j++) {
 
-			if (HelpCollise(ball, blocks[i][j]) && blocks[i][j].isActive) {
+			if (blocks[i][j].isActive && !collisionHandled) { // Проверяем только если столкновение ещё не обработано
 
-				if (ball.x <= blocks[i][j].x && ball.x + ball.rad <= blocks[i][j].x + blocks[i][j].width) {
+				if (HelpCollise(ball, blocks[i][j])) {
 
-					ball.dx = -ball.dx;
+					// Определяем, с какой стороны произошло столкновение
+					float overlapLeft = (ball.x + ball.rad) - blocks[i][j].x; // расстояние до левой стороны блока
+					float overlapRight = (blocks[i][j].x + blocks[i][j].width) - (ball.x - ball.rad); // расстояние до правой стороны блока
+					float overlapUP = (ball.y + ball.rad) - blocks[i][j].y; // расстояние до верхней стороны блока
+					float overlapDOWN = (blocks[i][j].y + blocks[i][j].height) - (ball.y - ball.rad); // расстояние до нижней стороны блока
 
+					// Находим минимальное перекрытие вручную
+					float minOverlapX = min(overlapLeft, overlapRight);
+					float minOverlapY = min(overlapUP, overlapDOWN);
 
+				
+					// Изменяем направление мяча в зависимости от стороны столкновения
+					if (minOverlapX < minOverlapY) {
+						ball.dx = -ball.dx; // Отскок по горизонтали
+					}
+					else {
+						ball.dy = -ball.dy; // Отскок по вертикали
+					}
+
+					collisionHandled = true; // Столкновение обработано, больше не проверяем другие блоки
+					blocks[i][j].isActive = false; // Деактивируем блок
+					return;
 				}
-
-				if (ball.y <= blocks[i][j].x + blocks[i][j].height && ball.y + ball.rad >= blocks[i][j].y) {
-
-					ball.dy = -ball.dy;
-
-				}
-
-				blocks[i][j].isActive = false;
 			}
-
-
 		}
-
 	}
 
 
