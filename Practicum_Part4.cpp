@@ -377,12 +377,7 @@ void ColliseBlock() {
 				}
 			}
 
-
-
-
 		}
-
-
 
 	}
 
