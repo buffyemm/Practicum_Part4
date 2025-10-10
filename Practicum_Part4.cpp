@@ -5,8 +5,7 @@
 #include "Practicum_Part4.h"
 
 #define MAX_LOADSTRING 100
-
-
+#define M_PI 3.14159265358979323846f
 
 typedef struct {
 	float x, y, width, height, rad, dx, dy, speed;
@@ -243,6 +242,121 @@ void Collision_blocks(HDC hDC) {
 	}
 }
 
+void COL(HDC hDC) {
+
+	float bx = ball.x;
+	float by = ball.y;
+
+	// Предварительно вычисляем угол направления
+	float move_angle = atan2(ball.dy, ball.dx);
+	const int COLLISION_POINTS = 8;
+
+	// Временные переменные для обработки множественных столкновений
+	float current_dx = ball.dx;
+	float current_dy = ball.dy;
+	float current_x = bx;
+	float current_y = by;
+
+	// Оставшееся расстояние, которое нужно пройти в этом кадре
+	float remaining_length = sqrt((ball.dx * ball.speed) * (ball.dx * ball.speed) +
+		(ball.dy * ball.speed) * (ball.dy * ball.speed));
+
+	for (int collisionCount = 0; remaining_length > 0; collisionCount++) {
+		bool collisionHandled = false;
+		float length = remaining_length; // Текущая длина для проверки
+
+		for (int k = 0; k < length && !collisionHandled; k++) {
+			float s = k / length;
+			float center_x = current_x + current_dx * k;
+			float center_y = current_y + current_dy * k;
+
+			for (int point_idx = 0; point_idx < COLLISION_POINTS && !collisionHandled; point_idx++) {
+				float angle = (M_PI * point_idx) / (COLLISION_POINTS - 1) - M_PI / 2;
+
+				// Вычисляем смещение точки относительно центра
+				float offset_x = cos(move_angle + angle) * ball.rad;
+				float offset_y = sin(move_angle + angle) * ball.rad;
+
+				// АБСОЛЮТНЫЕ координаты точки на окружности
+				float check_x = center_x + offset_x;
+				float check_y = center_y + offset_y;
+
+				// Отрисовываем абсолютные координаты (можно включить для дебага)
+				SetPixel(window.context, (int)check_x, (int)check_y, RGB(255, 20, 147));
+
+				// Проверяем столкновение с АБСОЛЮТНЫМИ координатами
+				for (int i = 0; i < line && !collisionHandled; i++) {
+					for (int j = 0; j < column && !collisionHandled; j++) {
+						if (blocks[i][j].isActive) {
+							if (check_x >= blocks[i][j].x && check_x <= blocks[i][j].x + blocks[i][j].width &&
+								check_y >= blocks[i][j].y && check_y <= blocks[i][j].y + blocks[i][j].height) {
+
+								// Определяем сторону столкновения (используем центр шара)
+								float block_center_x = blocks[i][j].x + blocks[i][j].width / 2;
+								float block_center_y = blocks[i][j].y + blocks[i][j].height / 2;
+
+								// Вектор от центра блока к центру шара
+								float dx_to_block = center_x - block_center_x;
+								float dy_to_block = center_y - block_center_y;
+
+								// Определяем, с какой стороны произошло столкновение
+								float overlapLeft = (center_x + ball.rad) - blocks[i][j].x;
+								float overlapRight = (blocks[i][j].x + blocks[i][j].width) - (center_x - ball.rad);
+								float overlapTop = (center_y + ball.rad) - blocks[i][j].y;
+								float overlapBottom = (blocks[i][j].y + blocks[i][j].height) - (center_y - ball.rad);
+
+								// Находим минимальное перекрытие
+								float minOverlapX = min(overlapLeft, overlapRight);
+								float minOverlapY = min(overlapTop, overlapBottom);
+
+								// Определяем направление отскока
+								if (minOverlapX < minOverlapY) {
+									// Горизонтальное столкновение
+									current_dx = -current_dx;
+								}
+								else {
+									// Вертикальное столкновение
+									current_dy = -current_dy;
+								}
+
+								// Обновляем угол направления для следующей итерации
+								move_angle = atan2(current_dy, current_dx);
+
+								// Перемещаем шар в точку столкновения (на расстояние k)
+								current_x = center_x;
+								current_y = center_y;
+
+								// Уменьшаем оставшееся расстояние на k
+								remaining_length = remaining_length - k;
+
+								collisionHandled = true;
+								blocks[i][j].isActive = false;
+
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// Если не было столкновений, выходим из цикла по столкновениям
+		if (!collisionHandled) {
+			// Перемещаем шар на оставшееся расстояние
+			current_x += current_dx * remaining_length;
+			current_y += current_dy * remaining_length;
+			remaining_length = 0;
+		}
+	}
+
+	// Обновляем позицию и направление шара
+	ball.x = current_x;
+	ball.y = current_y;
+	ball.dx = current_dx;
+	ball.dy = current_dy;
+
+
+}
+
 void ProcessRoom()
 {
 	CheckWalls();
@@ -315,6 +429,7 @@ void ProcessGame() {
 	ProcessInput();
 	ProcessBall();
 	Collision_blocks(hdc);
+	//COL(hdc);
 	ProcessRoom();
 	
 	ReleaseDC(window.hWnd, hdc);
