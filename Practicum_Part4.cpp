@@ -13,10 +13,23 @@ typedef struct {
 	HBITMAP hBitmap;//хэндл к спрайту шарика 
 	bool isActive;
 
+
 } sprite;
+
+sprite set_setting(int width, int height, int speed, int x, int startY) {
+
+	sprite a;
+	a.width = width;
+	a.height = height;
+	a.speed = speed;
+	a.x = x;
+	a.y = startY - height;
+
+	return a;
+}
 const int line = 15, column = 7;
 sprite racket;//ракетка игрока
-
+sprite trace;
 sprite blocks[line][column];
 sprite ball;//шарик
 
@@ -45,16 +58,12 @@ void InitWindow() { // инициализация структуры window
 
 }
 
-void InitGame()
-{
-	//в этой секции загружаем спрайты с помощью функций gdi
-	//пути относительные - файлы должны лежать рядом с .exe 
-	//результат работы LoadImageA сохраняет в хэндлах битмапов, рисование спрайтов будет произовдиться с помощью этих хэндлов
+void LoadPicture() {
+
 	ball.hBitmap = (HBITMAP)LoadImageA(NULL, "ball.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 	racket.hBitmap = (HBITMAP)LoadImageA(NULL, "racket.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-	auto blockBMP = (HBITMAP)LoadImageA(NULL, "bill.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 	hBack = (HBITMAP)LoadImageA(NULL, "back.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-	//------------------------------------------------------
+	auto blockBMP = (HBITMAP)LoadImageA(NULL, "bill.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 
 	for (int i = 0; i < line;i++) {
 		for (int j = 0; j < column; j++) {
@@ -66,12 +75,15 @@ void InitGame()
 			blocks[i][j].hBitmap = blockBMP;
 		}
 	}
-	racket.width = 300;
-	racket.height = 50;
-	racket.speed = 30;//скорость перемещения ракетки
-	racket.x = window.width / 2.;//ракетка посередине окна
-	racket.y = window.height - racket.height;//чуть выше низа экрана - на высоту ракетки
+}
 
+void InitGame()
+{
+	racket = set_setting(300, 50, 30, window.width / 2., window.height);
+	//в этой секции загружаем спрайты с помощью функций gdi
+	//пути относительные - файлы должны лежать рядом с .exe 
+	//------------------------------------------------------
+	LoadPicture();
 
 	ball.dy = (rand() % 65 + 35) / 100.;//формируем вектор полета шарика
 	ball.dx = -(1 - ball.dy);//формируем вектор полета шарика
@@ -88,19 +100,15 @@ void InitGame()
 }
 
 
-bool HelpCollise(sprite first, sprite second) {
+bool HelpCollise(sprite first, sprite second) { // изменил теперь тут вместо x, dx
 
-
-	if (first.x <= second.x + second.width && +
-		first.x + first.width >= second.x &&
-		first.y <= second.y + second.height &&
-		first.y + first.height >= second.y) {
-
+	if (first.dx <= second.x + second.width &&
+		first.dx >= second.x &&
+		first.dy <= second.y + second.height &&
+		first.dy >= second.y) {
 		return true;
 	}
-
 	return false;
-
 }
 
 
@@ -178,62 +186,61 @@ void CheckFloor()
 	}
 }
 
+void DistanceCalculate(sprite first, sprite second) {
+
+	float overlapLeft = first.dx - second.x;
+	float overlapRight = (second.x + second.width) - first.dx;
+	float overlapTop = first.dy - second.y;
+	float overlapBottom = (second.y + second.height) - first.dy;
+
+	float minOverlapX = min(overlapLeft, overlapRight);
+	float minOverlapY = min(overlapTop, overlapBottom);
+
+	if (minOverlapX < minOverlapY) {
+		ball.dx = -ball.dx;
+	}
+	else {
+		ball.dy = -ball.dy;
+	}
+
+}
+
+
 void Collision_blocks(HDC hDC) {
 
-	bool collisionHandled = false; // Флаг для отслеживания, было ли обработано столкновение
+	bool collisionHandled = false;
+	float length = ball.speed; // так как вектор полета шара нормализованн, не нужно расчитывать по формуле длинну вектора полета шара, потому что он является скоростью шара
 
-	float length = sqrt(pow((ball.dx * ball.speed), 2) + pow((ball.dy * ball.speed), 2));
+	for (int k = 0; k < length && !collisionHandled; k++) {
 
-	float bx = ball.x;
-	float by = ball.y;
+		float s = k / length;
 
+		// расчет координат точки трассировки, запускаем в цикл, чтобы ставить луч
+		trace.dx = ball.x + (ball.dx * ball.speed) * s;  
+		trace.dy = ball.y + (ball.dy * ball.speed) * s;
 
-	for (int k = 0; k < length; k++) {
+		SetPixel(hDC, trace.dx, trace.dy, RGB(255, 20, 147)); //отрисовка пикселя 
 
-		float s = k / (float)length;
-		float new_x = bx + (ball.dx * ball.speed) * s;
-		float new_y = by + (ball.dy * ball.speed) * s;
+		for (int i = 0; i < line && !collisionHandled; i++) {
 
-		SetPixel(hDC, new_x, new_y, RGB(255, 20, 147));
+			for (int j = 0; j < column && !collisionHandled; j++) {
 
-		for (int i = 0; i < line; i++) {
+				if (blocks[i][j].isActive && HelpCollise(trace, blocks[i][j])) { // чутка изменил функию HelpCollise 
 
-			for (int j = 0; j < column; j++) {
+					
+					DistanceCalculate(trace, blocks[i][j]);
 
-				//SetPixel(hDC,)
+					// обновляем позицию мяча
+					ball.x = trace.dx;
+					ball.y = trace.dy;
 
-				if (blocks[i][j].isActive && !collisionHandled) { // Проверяем только если столкновение ещё не обработано
-
-					if (HelpCollise(ball, blocks[i][j])) {
-
-						// Определяем, с какой стороны произошло столкновение
-						float overlapLeft = (ball.x + ball.rad) - blocks[i][j].x; // расстояние до левой стороны блока
-						float overlapRight = (blocks[i][j].x + blocks[i][j].width) - (ball.x - ball.rad); // расстояние до правой стороны блока
-						float overlapUP = (ball.y + ball.rad) - blocks[i][j].y; // расстояние до верхней стороны блока
-						float overlapDOWN = (blocks[i][j].y + blocks[i][j].height) - (ball.y - ball.rad); // расстояние до нижней стороны блока
-
-						// Находим минимальное перекрытие вручную
-						float minOverlapX = min(overlapLeft, overlapRight);
-						float minOverlapY = min(overlapUP, overlapDOWN);
-
-
-						// Изменяем направление мяча в зависимости от стороны столкновения
-						if (minOverlapX < minOverlapY) {
-							ball.dx = -ball.dx; // Отскок по горизонтали
-						}
-						else {
-							ball.dy = -ball.dy; // Отскок по вертикали
-						}
-
-						collisionHandled = true; // Столкновение обработано, больше не проверяем другие блоки
-						blocks[i][j].isActive = false; // Деактивируем блок
-						return;
-					}
+					collisionHandled = true;
+					blocks[i][j].isActive = false;
+					return;
 				}
 			}
 		}
 	}
-
 }
 
 void ProcessRoom()
@@ -302,12 +309,15 @@ void ShowObject(HDC hMemDC) {
 
 void ProcessGame() {
 
+	HDC hdc = GetDC(window.hWnd); // нужно для отриссовки трассировки, отладачный луч, он может мерцать потому что он не находиться в буффере 
+
 	LimitRacket();
 	ProcessInput();
 	ProcessBall();
-	//Collision_blocks();
+	Collision_blocks(hdc);
 	ProcessRoom();
-
+	
+	ReleaseDC(window.hWnd, hdc);
 }
 
 
@@ -339,6 +349,28 @@ void Case_Timer(WPARAM wParam, HWND hwnd) {
 
 
 	}
+
+}
+
+void Case_Paint(HDC hdc) {
+
+	// 1. Создаём буфер в памяти
+	HDC hMemDC = CreateCompatibleDC(hdc);
+	HBITMAP hMemBmp = CreateCompatibleBitmap(hdc, window.width, window.height);
+	HBITMAP hOldBmp = (HBITMAP)SelectObject(hMemDC, hMemBmp);
+
+
+	// --- Платформа и герой ---
+
+	ShowObject(hMemDC);
+
+	// 3. Копируем готовый буфер на экран
+	BitBlt(hdc, 0, 0, window.width, window.height, hMemDC, 0, 0, SRCCOPY);
+
+	// 4. Очистка
+	SelectObject(hMemDC, hOldBmp);
+	DeleteObject(hMemBmp);
+	DeleteDC(hMemDC);
 
 }
 
@@ -398,56 +430,33 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 	switch (uMsg) {
 
-
-	case WM_KEYDOWN:
+	case WM_KEYDOWN: {
 
 		Case_KEYdown(wParam, hwnd);
 		break;
-
-	
-
-	case WM_DESTROY: // когда уничтожается
+	}
+	case WM_DESTROY: {// когда уничтожается
 		Case_Destroy(hwnd);
 		return 0;
-
-
+	}
 	case WM_CREATE: { // кейс когда создается окно 
 
 		//Case_Create(hwnd);
 		break;
 
 	}
-
-	case WM_TIMER:
+	case WM_TIMER: {
 
 		Case_Timer(wParam, hwnd);
-
 		break;
-
+	}
 	case WM_PAINT: { // вывод на экран картинки 
 
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hwnd, &ps);
 
-		// 1. Создаём буфер в памяти
-		HDC hMemDC = CreateCompatibleDC(hdc);
-		HBITMAP hMemBmp = CreateCompatibleBitmap(hdc, window.width, window.height);
-		HBITMAP hOldBmp = (HBITMAP)SelectObject(hMemDC, hMemBmp);
-
-
-		// --- Платформа и герой ---
-
-		ShowObject(hMemDC);
-
-
-		// 3. Копируем готовый буфер на экран
-		BitBlt(hdc, 0, 0, window.width, window.height, hMemDC, 0, 0, SRCCOPY);
-
-		Collision_blocks(hdc);
-		// 4. Очистка
-		SelectObject(hMemDC, hOldBmp);
-		DeleteObject(hMemBmp);
-		DeleteDC(hMemDC);
+		Case_Paint(hdc);
+		
 		EndPaint(hwnd, &ps);
 	}
 
