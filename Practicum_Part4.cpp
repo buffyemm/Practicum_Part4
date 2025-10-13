@@ -108,16 +108,45 @@ public:
 		model.height = height;
 		picture = (HBITMAP)LoadImageW(NULL, name, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 		target = temp;
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal0.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal2.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal3.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal4.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal5.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal6.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+		anim.push_back((HBITMAP)LoadImageW(NULL, L"portal7.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE));
+
 	}
 
 	void HelpAnim() {
 
+	static bool end = false;
 
-		currentFrame++;
+		/*if (currentFrame < anim.size() && end) {
+		}
+			currentFrame++;
+		else {
 
+			currentFrame--;
 
-		if (currentFrame >= anim.size()) currentFrame = 0;
+			if (currentFrame >= anim.size()) currentFrame = 0;
 
+		}*/
+
+		if (currentFrame == anim.size() - 1) {
+			end = true;
+		}
+		else if (currentFrame == 0) {
+			end = false;
+		}
+		if (end) {
+			currentFrame--;
+		}
+		else {
+			currentFrame++;
+			
+		}
 
 	}
 
@@ -280,6 +309,14 @@ void InitGame() {
 
 }
 
+//void AnimPortal() {
+//
+//	if(room[hero.current_loc].portal[0].)
+//
+//
+//
+//}
+
 //вспомогательная функиця которая проверяет находиться ли first внутри second, проверка коллизии  
 bool СheckCollise(sprite first, sprite second) {
 
@@ -342,11 +379,8 @@ void ColliseBlock() {
 
 		if (СheckCollise(hero.model, p.model)) {
 
-
 			float UP = abs(p.model.y - (hero.model.y + hero.model.height));
 			float DOWN = abs((p.model.y + p.model.height) - hero.model.y);
-
-			//float RIGHT = ();
 			int over_Y = min(UP, DOWN);
 
 			float LEFT = abs(p.model.x - (hero.model.x + hero.model.width));
@@ -365,7 +399,6 @@ void ColliseBlock() {
 				}
 			}
 			else {
-
 				if (UP < DOWN)
 				{
 					hero.model.y = p.model.y - hero.model.height;
@@ -376,11 +409,8 @@ void ColliseBlock() {
 					hero.model.y = p.model.y + p.model.height;
 				}
 			}
-
 		}
-
 	}
-
 }
 
 
@@ -588,7 +618,7 @@ void ShowObject(HDC hMemDC) {
 	// порталы
 	for (auto p : room[hero.current_loc].portal) {
 
-		DrawBitmap(hMemDC, p.model.x, p.model.y, p.model.width, p.model.height, p.picture, true);
+		DrawBitmap(hMemDC, p.model.x, p.model.y, p.model.width, p.model.height, p.anim[p.currentFrame], true);
 
 	}
 
@@ -883,6 +913,12 @@ void Case_Timer(WPARAM wParam, HWND hwnd) {
 		time_at = false;
 	}
 
+	if (wParam == 3) {
+
+		room[0].portal[0].HelpAnim();
+
+	}
+
 }
 
 void Case_Paint(HDC hdc) {
@@ -946,6 +982,7 @@ int WINAPI wWinMain(HINSTANCE hI, HINSTANCE hPrevInstance, PWSTR pCmdLine, int n
 	ShowWindow(window.hWnd, nCmdShow);
 
 	SetTimer(window.hWnd, 1, 16, NULL);// ставим таймер на 16 милесикунд~60фпс
+	SetTimer(window.hWnd, 3, 160, NULL);// таймер для анимаций
 
 
 	MSG msg = { };
