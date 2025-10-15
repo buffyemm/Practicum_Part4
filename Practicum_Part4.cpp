@@ -87,7 +87,7 @@ void InitGame()
 
 	ball.dy = (rand() % 65 + 35) / 100.;//формируем вектор полета шарика
 	ball.dx = -(1 - ball.dy);//формируем вектор полета шарика
-	ball.speed = 20;
+	ball.speed = 200;
 	ball.rad = 20;
 	ball.x = racket.x;//x координата шарика - на середие ракетки
 	ball.y = racket.y - ball.rad;//шарик лежит сверху ракетки
@@ -188,20 +188,7 @@ void CheckFloor()
 
 void DistanceCalculate(sprite first, sprite second) {
 
-	float overlapLeft = first.dx - second.x;
-	float overlapRight = (second.x + second.width) - first.dx;
-	float overlapTop = first.dy - second.y;
-	float overlapBottom = (second.y + second.height) - first.dy;
-
-	float minOverlapX = min(overlapLeft, overlapRight);
-	float minOverlapY = min(overlapTop, overlapBottom);
-
-	if (minOverlapX < minOverlapY) {
-		ball.dx = -ball.dx;
-	}
-	else {
-		ball.dy = -ball.dy;
-	}
+	
 
 }
 
@@ -214,12 +201,17 @@ void Collision_blocks(HDC hDC) {
 	for (int k = 0; k < length && !collisionHandled; k++) {
 
 		float s = k / length;
+		float m;
+		float mx = ball.dx;
+		float my = ball.dy;
 
 		// расчет координат точки трассировки, запускаем в цикл, чтобы ставить луч
 		trace.dx = ball.x + (ball.dx * ball.speed) * s;  
 		trace.dy = ball.y + (ball.dy * ball.speed) * s;
 
 		SetPixel(hDC, trace.dx, trace.dy, RGB(255, 20, 147)); //отрисовка пикселя 
+
+					SetPixel(hDC, mx, my, RGB(255, 20, 147));
 
 		for (int i = 0; i < line && !collisionHandled; i++) {
 
@@ -228,14 +220,33 @@ void Collision_blocks(HDC hDC) {
 				if (blocks[i][j].isActive && HelpCollise(trace, blocks[i][j])) { // чутка изменил функию HelpCollise 
 
 					
-					DistanceCalculate(trace, blocks[i][j]);
+					m = k / length;
+					float mx = trace.dx + (ball.dx * ball.speed) * m;
+					float my = trace.dy + (ball.dy * ball.speed) * m;
+
+					float overlapLeft = trace.dx - blocks[i][j].x;
+					float overlapRight = (blocks[i][j].x + blocks[i][j].width) - trace.dx;
+					float overlapTop = trace.dy - blocks[i][j].y;
+					float overlapBottom = (blocks[i][j].y + blocks[i][j].height) - trace.dy;
+
+					float minOverlapX = min(overlapLeft, overlapRight);
+					float minOverlapY = min(overlapTop, overlapBottom);
+
+					if (minOverlapX < minOverlapY) {
+						//trace.dx = -ball.dx;
+						mx = -mx;
+					}
+					else {
+						my = -my;
+						//trace.dy = -ball.dy;
+					}
 
 					// обновляем позицию мяча
-					ball.x = trace.dx;
-					ball.y = trace.dy;
+					//ball.x = trace.dx;
+					//ball.y = trace.dy;
 
 					collisionHandled = true;
-					blocks[i][j].isActive = false;
+					//blocks[i][j].isActive = false;
 					return;
 				}
 			}
@@ -307,16 +318,18 @@ void ShowObject(HDC hMemDC) {
 
 }
 
+POINT p;
 void ProcessGame() {
 
 	HDC hdc = GetDC(window.hWnd); // нужно для отриссовки трассировки, отладачный луч, он может мерцать потому что он не находиться в буффере 
 
 	LimitRacket();
-	ProcessInput();
-	ProcessBall();
+	//ProcessInput();
+	//ProcessBall();
 	Collision_blocks(hdc);
 	ProcessRoom();
-	
+	ball.x = p.x;
+	ball.y = p.y;
 	ReleaseDC(window.hWnd, hdc);
 }
 
@@ -340,10 +353,11 @@ void Case_Destroy(HWND hwnd) {
 
 }
 
+
 void Case_Timer(WPARAM wParam, HWND hwnd) {
 
 	if (wParam == 1) { // у каждого таймера есть свой айди, и если таймер под айдишником 1 закончился, то мы запускаем то что ниже
-
+		GetCursorPos(&p);
 		InvalidateRect(hwnd, NULL, FALSE); // перерисовка всего окна
 		ProcessGame();
 
